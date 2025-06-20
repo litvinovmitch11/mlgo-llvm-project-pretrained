@@ -1,0 +1,85 @@
+source venv/bin/activate
+TF_PIP=$(python -m pip show tensorflow | grep Location | cut -d ' ' -f 2)
+export TENSORFLOW_AOT_PATH="${TF_PIP}/tensorflow"
+export TFLITE_PATH=/home/mitchell/development/mlgo-workspace/tflite
+
+
+cmake -G Ninja \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DLLVM_ENABLE_PROJECTS="clang;lld" \
+  -DLLVM_ENABLE_LTO=OFF \
+  -C ${TFLITE_PATH}/tflite.cmake \
+  -S /home/mitchell/development/mlgo-workspace/llvm-project-runner/llvm-project/llvm
+
+
+cmake -G Ninja \
+  -DCMAKE_C_COMPILER=/home/mitchell/development/mlgo-workspace/llvm-project-runner/build-development/bin/clang \
+  -DCMAKE_CXX_COMPILER=/home/mitchell/development/mlgo-workspace/llvm-project-runner/build-development/bin/clang++ \
+  -DCMAKE_BUILD_TYPE=MinSizeRel \
+  -DLLVM_ENABLE_PROJECTS="clang;lld" \
+  -DCMAKE_C_FLAGS="-Xclang=-fembed-bitcode=all" \
+  -DCMAKE_CXX_FLAGS="-Xclang=-fembed-bitcode=all" \
+  -S /home/mitchell/development/mlgo-workspace/llvm-project-doner/llvm-project/llvm
+
+
+extract_ir \
+  --cmd_filter="^-O2|-Os|-Oz$" \
+  --input=/home/mitchell/development/mlgo-workspace/llvm-project-doner/build/compile_commands.json \
+  --input_type=json \
+  --llvm_objcopy_path=/home/mitchell/development/mlgo-workspace/llvm-project-runner/build-development/bin/llvm-objcopy \
+  --output_dir=/home/mitchell/development/mlgo-workspace/corpus
+
+
+PYTHONPATH=$PYTHONPATH:. python \
+  compiler_opt/tools/generate_default_trace.py \
+  --data_path=/home/mitchell/development/mlgo-workspace/corpus \
+  --output_path=/home/mitchell/development/mlgo-workspace/traces/traces.tfrecord \
+  --gin_files=compiler_opt/rl/inlining/gin_configs/common.gin \
+  --gin_bindings=clang_path="'/home/mitchell/development/mlgo-workspace/llvm-project-runner/build-development/bin/clang'" \
+  --gin_bindings=llvm_size_path="'/home/mitchell/development/mlgo-workspace/llvm-project-runner/build-development/bin/llvm-size'" \
+  --sampling_rate=1.0
+
+
+Обучаете модель методом Behavioral Cloning (имитация решений из трейсов).
+
+PYTHONPATH=$PYTHONPATH:. python \
+  compiler_opt/rl/train_bc.py \
+  --root_dir=/home/mitchell/development/mlgo-workspace/models/warmstart \
+  --data_path=/home/mitchell/development/mlgo-workspace/traces/traces.tfrecord \
+  --gin_files=compiler_opt/rl/inlining/gin_configs/behavioral_cloning_nn_agent.gin
+
+
+Обучение модели алгоритмом PPO (Proximal Policy Optimization)
+
+PYTHONPATH=$PYTHONPATH:. python \
+  compiler_opt/rl/train_locally.py \
+  --root_dir=/home/mitchell/development/mlgo-workspace/models/llvm-optimized-model \
+  --data_path=/home/mitchell/development/mlgo-workspace/corpus \
+  --gin_bindings=clang_path="'/home/mitchell/development/mlgo-workspace/llvm-project-runner/build-development/bin/clang'" \
+  --gin_bindings=llvm_size_path="'/home/mitchell/development/mlgo-workspace/llvm-project-runner/build-development/bin/llvm-size'" \
+  --gin_files=compiler_opt/rl/inlining/gin_configs/ppo_nn_agent.gin \
+  --gin_bindings=train_eval.warmstart_policy_dir=\"/home/mitchell/development/mlgo-workspace/models/warmstart/saved_policy\"
+
+
+PYTHONPATH=$PYTHONPATH:. python \
+compiler_opt/tools/generate_default_trace.py \
+  --data_path=/home/mitchell/development/mlgo-workspace/corpus \
+  --policy_path=/home/mitchell/development/mlgo-workspace/models/llvm-optimized-model/saved_policy \
+  --output_performance_path=/home/mitchell/development/mlgo-workspace/performace_report.csv \
+  --gin_files=compiler_opt/rl/inlining/gin_configs/common.gin \
+  --gin_bindings=clang_path="'/home/mitchell/development/mlgo-workspace/llvm-project-runner/build-development/bin/clang'" \
+  --gin_bindings=llvm_size_path="'/home/mitchell/development/mlgo-workspace/llvm-project-runner/build-development/bin/llvm-size'" \
+  --sampling_rate=1.0
+
+
+PYTHONPATH=$PYTHONPATH:. python \
+compiler_opt/tools/feature_importance.py \
+    --gin_files=compiler_opt/rl/inlining/gin_configs/common.gin \
+    --gin_bindings=clang_path="'/home/mitchell/development/mlgo-workspace/llvm-project-runner/build-development/bin/clang'" \
+    --gin_bindings=llvm_size_path="'/home/mitchell/development/mlgo-workspace/llvm-project-runner/build-development/bin/llvm-size'" \
+    --data_path=/home/mitchell/development/mlgo-workspace/traces/traces.tfrecord \
+    --model_path=/home/mitchell/development/mlgo-workspace/models/llvm-optimized-model/saved_policy \
+    --num_examples=50 \
+    --output_file=/home/mitchell/development/mlgo-workspace/explanation_data.json
