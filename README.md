@@ -2,4 +2,4 @@
 ## Литвинов Михаил
 ### Репозиторий к защите НИРа в НИУ ВШЭ СПб
 
-Ссылка на Hugging Face: [https://huggingface.co/litvinovmitch11/mlgo-llvm-project-pretrained]{https://huggingface.co/litvinovmitch11/mlgo-llvm-project-pretrained}
+Ссылка на Hugging Face: https://huggingface.co/litvinovmitch11/mlgo-llvm-project-pretrained
