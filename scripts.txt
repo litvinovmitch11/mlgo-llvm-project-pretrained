@@ -83,3 +83,65 @@ compiler_opt/tools/feature_importance.py \
     --model_path=/home/mitchell/development/mlgo-workspace/models/llvm-optimized-model/saved_policy \
     --num_examples=50 \
     --output_file=/home/mitchell/development/mlgo-workspace/explanation_data.json
+
+
+cmake -G Ninja \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DLLVM_ENABLE_PROJECTS="clang;lld" \
+  -DLLVM_ENABLE_LTO=OFF \
+  -DTENSORFLOW_AOT_PATH=/home/mitchell/development/mlgo-workspace/venv/lib/python3.10/site-packages/tensorflow \
+  -DLLVM_INLINER_MODEL_PATH=/home/mitchell/development/mlgo-workspace/models/llvm-optimized-model/saved_policy \
+  -S /home/mitchell/development/mlgo-workspace/llvm-project-runner/llvm-project/llvm
+
+
+cmake -G Ninja \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DLLVM_ENABLE_PROJECTS="clang;lld" \
+  -DLLVM_ENABLE_LTO=OFF \
+  -DTENSORFLOW_AOT_PATH=/home/mitchell/development/mlgo-workspace/venv/lib/python3.10/site-packages/tensorflow \
+  -DLLVM_INLINER_MODEL_PATH=/home/mitchell/development/mlgo-workspace/models/mlgo-Inlining-Oz-v1.2-model \
+  -S /home/mitchell/development/mlgo-workspace/llvm-project-runner/llvm-project/llvm
+
+
+cmake -G Ninja \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DLLVM_ENABLE_PROJECTS="clang;lld" \
+  -DLLVM_ENABLE_LTO=OFF \
+  -S /home/mitchell/development/mlgo-workspace/llvm-project-runner/llvm-project/llvm
+
+
+cmake -G Ninja \
+  -DCMAKE_C_COMPILER=/home/mitchell/development/mlgo-workspace/llvm-project-runner/build-release/bin/clang \
+  -DCMAKE_CXX_COMPILER=/home/mitchell/development/mlgo-workspace/llvm-project-runner/build-release/bin/clang++ \
+  -DCMAKE_C_FLAGS="-mllvm -enable-ml-inliner=release" \
+  -DCMAKE_CXX_FLAGS="-mllvm -enable-ml-inliner=release" \
+  -DCMAKE_BUILD_TYPE=MinSizeRel \
+  -DLLVM_ENABLE_PROJECTS="clang;lld" \
+  -DLLVM_ENABLE_LTO=OFF \
+  -S /home/mitchell/development/mlgo-workspace/llvm-project-runner/llvm-project/llvm
+
+
+cmake -G Ninja \
+  -DCMAKE_C_COMPILER=/home/mitchell/development/mlgo-workspace/llvm-project-runner/build-mlgo/bin/clang \
+  -DCMAKE_CXX_COMPILER=/home/mitchell/development/mlgo-workspace/llvm-project-runner/build-mlgo/bin/clang++ \
+  -DCMAKE_C_FLAGS="-mllvm -enable-ml-inliner=release" \
+  -DCMAKE_CXX_FLAGS="-mllvm -enable-ml-inliner=release" \
+  -DCMAKE_BUILD_TYPE=MinSizeRel \
+  -DLLVM_ENABLE_PROJECTS="clang;lld" \
+  -DLLVM_ENABLE_LTO=OFF \
+  -S /home/mitchell/development/mlgo-workspace/llvm-project-runner/llvm-project/llvm
+
+
+cmake -G Ninja \
+  -DCMAKE_C_COMPILER=/home/mitchell/development/mlgo-workspace/llvm-project-runner/build-default/bin/clang \
+  -DCMAKE_CXX_COMPILER=/home/mitchell/development/mlgo-workspace/llvm-project-runner/build-default/bin/clang++ \
+  -DCMAKE_BUILD_TYPE=MinSizeRel \
+  -DLLVM_ENABLE_PROJECTS="clang;lld" \
+  -DLLVM_ENABLE_LTO=OFF \
+  -S /home/mitchell/development/mlgo-workspace/llvm-project-runner/llvm-project/llvm
